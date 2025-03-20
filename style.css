@@ -1,0 +1,199 @@
+html {
+    font-family: Arial, Helvetica, sans-serif;
+    display: inline-block;
+    text-align: center;
+    background-color: rgba(41,42,45,1);
+    opacity: 0.8;
+    background-image: radial-gradient(circle at center center, #010051, rgba(41,42,45,1)), repeating-radial-gradient(circle at center center, #010051, #010051, 34px, transparent 68px, transparent 34px);
+    background-blend-mode: multiply;
+}
+h1 {
+    font-size: 1.8rem;
+    color: white;
+}
+body {
+    margin: 0;
+}
+.content {
+    padding: 50px;
+}
+.card-grid {
+    max-width: 800px;
+    margin: 0 auto;
+    margin-bottom: 30px;
+    display: grid;
+    grid-gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.card {
+    background-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+    border-radius: 10px;
+    padding: 1%;
+}
+button {
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.onButton{
+    background-color: #1b8a94;
+}
+
+.offButton{
+    background-color: #5f6c6d;
+}
+
+.connectButton{
+    background-color: #24af37;
+}
+
+.disconnectButton{
+    background-color: #d13a30;
+}
+
+.gray-label {
+    color: #e4e4e4;
+    font-size: 1rem;
+}
+
+.reading {
+    font-size: 1.8rem;
+    text-align: center;
+}
+
+
+
+
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative; /* Voeg dit toe */
+    display: inline-block; /* Gebruik inline-block in plaats van flex */
+    width: 60px; /* Breedte van de switch */
+    height: 34px; /* Hoogte van de switch */
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* The slider */
+.checkSlider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px; /* Ronde hoeken voor de slider */
+}
+
+.checkSlider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%; /* Maak de slider-knop rond */
+}
+
+input:checked + .checkSlider {
+    background-color: #2196F3;
+}
+
+input:focus + .checkSlider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .checkSlider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+
+
+
+
+
+.slider-container {
+    position: relative;
+    width: 90%;
+    padding-left: 5%;
+    padding-right: 5%;
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    
+}
+
+.slider {
+    width: 95%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 25px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity .2s;
+}
+
+#sliderThumb {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    pointer-events: none; /* Zorgt dat de gebruiker nog steeds kan slepen */
+
+}
+/*
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    background: transparent;
+    border: none;
+}
+
+.slider::-moz-range-thumb {
+    appearance: none;
+    width: 0;
+    height: 0;
+    background: transparent;
+    border: none;
+}*/
+
+.sliderThumb {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    pointer-events: none; /* Zorgt dat de gebruiker nog steeds kan slepen */
+}
+
+
+
+.nextTo {
+    display: flex;
+    align-items: center; /* Zorgt ervoor dat alles in het midden staat */
+    gap: 10px; /* Voegt ruimte toe tussen de elementen */
+    justify-content: center;
+}
+
+.textBox{
+    width: 90%;
+}
