@@ -29,15 +29,6 @@
             </div>
         </div>
 
-        <!-- Sensor Data Display Section -->
-        <div class="card-grid">
-            <div class="card">
-                <h2>Sensor Data</h2>
-                <p class="reading"><span id="sensorValueContainer">NaN</span></p>
-                <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
-            </div>
-        </div>
-
         <!-- Motor Control Section -->
         <div class="card-grid">
             <!-- Distance Control -->
@@ -146,6 +137,38 @@
                 </p>
             </div>
         </div>
+
+        <!-- Sensor Data Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <h2>Hoogte sensor</h2>
+                <p class="reading"><span id="hoogteSensorValueContainer">NaN</span></p>
+                <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
+            </div>
+        </div>
+
+        <!-- Sensor Data Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <h2>Hoek sensor</h2>
+                <p class="reading"><span id="hoekSensorValueContainer">NaN</span></p>
+                <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
+            </div>
+        </div>
+        
+        <!-- Sensor Data Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="buzzer" type="checkbox">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">buzzer</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 </body>
 <footer>
@@ -196,6 +219,10 @@
         const leftRightDoneCheckbox = document.getElementById("leftRightDone");
         let isLeftRightDone = false;
 
+        //buzzer
+        const buzzer = document.getElementById("buzzer");
+        let isBuzzer = false;
+
 	// alles klaar variable
 	const allesDoneCheckbox = document.getElementById("AllesDone");
 	let isAllesDone = false;
@@ -237,6 +264,15 @@
             updateSliderAndInput(leftRightSlider, leftRightInput, leftRightSliderThumb, true);
         });
 	
+        buzzer.addEventListener("click", () => {
+            isBuzzer = !isBuzzer;
+            if (isBuzzer) {
+                buzzer.style.backgroundColor = "#24af37";
+            } else {
+                buzzer.style.backgroundColor = "#d13a30";
+            }
+        });
+
 	// Event listeners for "Done" checkboxes
         distanceDoneCheckbox.addEventListener("click", () => {
             isDistanceDone = !isDistanceDone;
@@ -341,6 +377,12 @@
                     }
 
                     dataToSend += leftRightInput.value + "&";
+                    
+                    if(isBuzzer) {
+                        dataToSend += "1";
+                    } else {
+                        dataToSend += "0";
+                    }
 
                     writeToMotorControlCharacteristic(dataToSend);
                 } catch (error) {
@@ -436,7 +478,15 @@
         function handleSensorDataChange(event) {
             const newValueReceived = new TextDecoder().decode(event.target.value);
             console.log("Sensor data changed: ", newValueReceived);
-            sensorValueContainer.innerHTML = newValueReceived;
+
+            newValueReceived.split("&").forEach((value, index) => {
+                if (index === 0) {
+                    hoogteSensorValueContainer.innerHTML = value;
+                } else if (index === 1) {
+                    hoekSensorValueContainer.innerHTML = value;
+                }
+            });
+
             sensorTimestampContainer.innerHTML = getDateTime();
         }
 
