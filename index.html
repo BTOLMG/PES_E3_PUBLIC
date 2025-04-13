@@ -25,7 +25,8 @@
                     <button id="connectBleButton" class="connectButton">Connect to BLE Device</button>
                     <button id="disconnectBleButton" class="disconnectButton">Disconnect BLE Device</button>
                 </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+                <p class="gray-label">BLE state: <strong><span id="bleState"
+                            style="color:#d13a30;">Disconnected</span></strong></p>
             </div>
         </div>
 
@@ -89,11 +90,11 @@
 
             <!-- Left/Right Control -->
             <div class="card">
-                <h2>Links/Rechts (m)</h2> 
+                <h2>Links/Rechts (m)</h2>
                 <div class="nextTo">
                     <label class="switch">
                         <input id="maxHeightCheck" type="checkbox">
-                        <span ></span>
+                        <span></span>
                     </label>
                     <span class="reading"></span>
                 </div>
@@ -115,9 +116,9 @@
                 <br>
                 <p class="gray-label">Vorige waarde: <span id="valueSentLeftRight"></span></p>
             </div>
-	    <!-- Klaar alles -->
+            <!-- Klaar alles -->
             <div class="card">
-                <h2>Alles klaar</h2> 
+                <h2>Alles klaar</h2>
                 <div class="nextTo">
                     <label class="switch">
                         <input id="AllesDone" type="checkbox">
@@ -155,8 +156,8 @@
                 <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
             </div>
         </div>
-        
-        <!-- Sensor Data Display Section -->
+
+        <!-- Buzzer Display Section -->
         <div class="card-grid">
             <div class="card">
                 <div class="nextTo">
@@ -164,17 +165,39 @@
                         <input id="buzzer" type="checkbox">
                         <span class="checkSlider"></span>
                     </label>
-                    <span class="reading">buzzer</span>
+                    <span class="reading">Buzzer</span>
                 </div>
             </div>
         </div>
 
+        <!-- LED Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <div class="nextTo">
+                    <div class="app-container">
+                        <div class="circle-container">
+                            <!-- Buttons will be added dynamically -->
+                        </div>
+
+                        <div class="color-controls">
+                            <input type="color" id="colorPicker" value="#ffffff">
+                            <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="1">
+                            <label for="opacitySlider">Opacity</label>
+                            <div class="rgb-values" id="rgbValues">RGBA: 255, 255, 255, 1</div>
+                            <button class="reset-btn" id="resetBtn">Reset All Colors</button>
+                            <button class="send-btn" id="sendBtn">Send All Colors</button>
+                        </div>
+                    </div>
+                    <script src="script.js"></script>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 <footer>
     <script>
         // DOM Elements
-       // DOM Elements
+        // DOM Elements
         const connectButton = document.getElementById('connectBleButton');
         const disconnectButton = document.getElementById('disconnectBleButton');
         const sensorValueContainer = document.getElementById('sensorValueContainer');
@@ -223,9 +246,9 @@
         const buzzer = document.getElementById("buzzer");
         let isBuzzer = false;
 
-	// alles klaar variable
-	const allesDoneCheckbox = document.getElementById("AllesDone");
-	let isAllesDone = false;
+        // alles klaar variable
+        const allesDoneCheckbox = document.getElementById("AllesDone");
+        let isAllesDone = false;
 
         // Update sliders and input fields
         function updateSliderAndInput(slider, input, thumb, isSlider) {
@@ -263,17 +286,21 @@
             updateSliderAndInput(heightSlider, heightInput, heightSliderThumb, true);
             updateSliderAndInput(leftRightSlider, leftRightInput, leftRightSliderThumb, true);
         });
-	
+
         buzzer.addEventListener("click", () => {
             isBuzzer = !isBuzzer;
+            let dataToSend = "&&&";
+
             if (isBuzzer) {
-                buzzer.style.backgroundColor = "#24af37";
+                dataToSend += "1&";
             } else {
-                buzzer.style.backgroundColor = "#d13a30";
+                dataToSend += "0&";
             }
+            writeToMotorControlCharacteristic(dataToSend);
+
         });
 
-	// Event listeners for "Done" checkboxes
+        // Event listeners for "Done" checkboxes
         distanceDoneCheckbox.addEventListener("click", () => {
             isDistanceDone = !isDistanceDone;
             if (isDistanceDone) {
@@ -295,32 +322,32 @@
                 maxDistanceCheck.disabled = true;
                 distanceSlider.disabled = true;
                 distanceInput.disabled = true;
-		
-		maxHeightCheck.disabled = true;
+
+                maxHeightCheck.disabled = true;
                 heightSlider.disabled = true;
                 heightInput.disabled = true;
 
-		leftRightSlider.disabled = true;
-            	leftRightInput.disabled = true;
-		
-		distanceDoneCheckbox.disabled = true;
-		heightDoneCheckbox.disabled = true;
-		leftRightDoneCheckbox.disabled = true;
+                leftRightSlider.disabled = true;
+                leftRightInput.disabled = true;
+
+                distanceDoneCheckbox.disabled = true;
+                heightDoneCheckbox.disabled = true;
+                leftRightDoneCheckbox.disabled = true;
             } else {
                 maxDistanceCheck.disabled = false;
                 distanceSlider.disabled = false;
                 distanceInput.disabled = false;
 
-		maxHeightCheck.disabled = false;
+                maxHeightCheck.disabled = false;
                 heightSlider.disabled = false;
                 heightInput.disabled = false;
 
-		leftRightSlider.disabled = false;
-            	leftRightInput.disabled = false;
+                leftRightSlider.disabled = false;
+                leftRightInput.disabled = false;
 
-		distanceDoneCheckbox.disabled = false;
-		heightDoneCheckbox.disabled = false;
-		leftRightDoneCheckbox.disabled = false;
+                distanceDoneCheckbox.disabled = false;
+                heightDoneCheckbox.disabled = false;
+                leftRightDoneCheckbox.disabled = false;
             }
         });
 
@@ -377,11 +404,11 @@
                     }
 
                     dataToSend += leftRightInput.value + "&";
-                    
-                    if(isBuzzer) {
-                        dataToSend += "1";
+
+                    if (isBuzzer) {
+                        dataToSend += "1&";
                     } else {
-                        dataToSend += "0";
+                        dataToSend += "0&";
                     }
 
                     writeToMotorControlCharacteristic(dataToSend);
@@ -550,6 +577,163 @@
 
             return `${day}/${month}/${year} at ${hours}:${minutes}:${seconds}`;
         }
+
+
+        //-------------led code-------------
+    // DOM Elements
+    const container = document.querySelector('.circle-container');
+    const sendBtn = document.getElementById('sendBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const rgbValues = document.getElementById('rgbValues');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // State variables
+    let selectedColor = { r: 255, g: 255, b: 255 };
+    let selectedOpacity = 1;
+    let ledColors = Array(12).fill().map(() => ({ r: 0, g: 0, b: 0, a: 0, active: false }));
+
+    // Constants
+    const radius = 150;
+    const center = 200;
+    const buttonCount = 12;
+
+    // Initialize the application
+    function init() {
+        createToggleButtons();
+        setupEventListeners();
+        updateRGBValues();
+    }
+
+    // Create toggle buttons in a circle
+    function createToggleButtons() {
+        for (let i = 0; i < buttonCount; i++) {
+            const angle = (i * (2 * Math.PI / buttonCount)) - Math.PI / 2;
+            const x = center + radius * Math.cos(angle) - 25;
+            const y = center + radius * Math.sin(angle) - 25;
+
+            const button = document.createElement('button');
+            button.className = 'toggle-btn';
+            button.textContent = i + 1;
+            button.style.left = `${x}px`;
+            button.style.top = `${y}px`;
+            button.setAttribute('data-index', i);
+            button.style.backgroundColor = '#e0e0e0'; // Default color
+
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                
+                if (this.classList.contains('active')) {
+                    // If already active, keep the color but mark as inactive
+                    this.classList.remove('active');
+                    ledColors[index].active = false;
+                } else {
+                    // If not active, set the current color and opacity
+                    ledColors[index] = {
+                        r: selectedColor.r,
+                        g: selectedColor.g,
+                        b: selectedColor.b,
+                        a: selectedOpacity,
+                        active: true
+                    };
+                    this.style.backgroundColor = getRGBAString(ledColors[index]);
+                    this.classList.add('active');
+                }
+            });
+
+            container.appendChild(button);
+        }
+    }
+
+    // Helper function to get RGBA string
+    function getRGBAString(color) {
+        return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+    }
+
+    // Update RGB values display
+    function updateRGBValues() {
+        rgbValues.textContent = `RGBA: ${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b}, ${selectedOpacity}`;
+    }
+
+    // Function to send LED data
+    function sendLedData() {
+        const activeLEDs = ledColors.filter(led => led.active);
+        let ledData = "&&&&";
+        ledColors.forEach((led, index) => {
+            if (led.active) {
+                ledData += `${index}:${led.r},${led.g},${led.b}|`;
+            }else{
+                ledData += `${index}:0,0,0|`;
+            }
+        });
+
+        // Remove the trailing '|' character if exists
+        ledData = ledData.slice(0, -1);
+        console.log("Sending LED data:", ledData);
+        // Send the data
+        writeToMotorControlCharacteristic(ledData);
+    }
+
+    // Update all active buttons with current color and opacity
+    function updateActiveButtons() {
+        const buttons = document.querySelectorAll('.toggle-btn');
+        buttons.forEach(button => {
+            const index = parseInt(button.getAttribute('data-index'));
+            if (ledColors[index].active) {
+                button.style.backgroundColor = getRGBAString(ledColors[index]);
+            }
+        });
+        updateRGBValues();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        // Color picker changes
+        colorPicker.addEventListener('input', function() {
+            selectedColor = hexToRgb(this.value);
+            updateRGBValues();
+        });
+
+        // Opacity slider changes
+        opacitySlider.addEventListener('input', function() {
+            selectedOpacity = parseFloat(this.value);
+            updateRGBValues();
+        });
+
+        // Reset button
+        resetBtn.addEventListener('click', function() {
+            selectedColor = { r: 255, g: 255, b: 255 };
+            selectedOpacity = 1;
+            colorPicker.value = '#ffffff';
+            opacitySlider.value = 1;
+            
+            // Reset all LEDs
+            ledColors = Array(12).fill().map(() => ({ r: 0, g: 0, b: 0, a: 0, active: false }));
+            
+            const buttons = document.querySelectorAll('.toggle-btn');
+            buttons.forEach(button => {
+                button.style.backgroundColor = '#e0e0e0';
+                button.classList.remove('active');
+            });
+            updateRGBValues();
+        });
+        
+        // Send button
+        sendBtn.addEventListener('click', sendLedData);
+    }
+
+    // Convert hex color to RGB
+    function hexToRgb(hex) {
+        const bigint = parseInt(hex.slice(1), 16);
+        return {
+            r: (bigint >> 16) & 255,
+            g: (bigint >> 8) & 255,
+            b: bigint & 255,
+        };
+    }
+
+    // Initialize the application
+    init();
     </script>
 </footer>
 
