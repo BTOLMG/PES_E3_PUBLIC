@@ -661,7 +661,7 @@
         let ledData = "&&&&";
         ledColors.forEach((led, index) => {
             if (led.active) {
-                ledData += `${index}:${led.r},${led.g},${led.b},${selectedOpacity}|`;
+                ledData += `${index}:${led.r},${led.g},${led.b},${led.a}|`;
             }else{
                 ledData += `${index}:0,0,0,0|`;
             }
