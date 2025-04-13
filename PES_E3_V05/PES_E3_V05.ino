@@ -6,6 +6,12 @@
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <MPU6050.h>
+#include <FastLED.h>
+
+#define LED_PIN 13
+#define NUM_LEDS 12
+
+CRGB leds[NUM_LEDS];
 
 VL53L0X sensor;
 MPU6050 mpu;
@@ -102,17 +108,68 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
       int separatorIndex2 = value.indexOf('&', separatorIndex1 + 1);
       int separatorIndex3 = value.indexOf('&', separatorIndex2 + 1);
       int separatorIndex4 = value.indexOf('&', separatorIndex3 + 1);
-  
+      int separatorIndex5 = value.indexOf('&', separatorIndex4 + 1);
+      int separatorIndex6 = value.indexOf('&', separatorIndex5 + 1);
+
       if (separatorIndex1 != -1 && separatorIndex2 != -1 && separatorIndex3 != -1) {
         String distanceStr = value.substring(0, separatorIndex1);
         String heightStr = value.substring(separatorIndex1 + 1, separatorIndex2);
         String leftRightStr = value.substring(separatorIndex2 + 1, separatorIndex3);
         String needToBuzzer = value.substring(separatorIndex3 + 1, separatorIndex4);
+        String ledCommands = value.substring(separatorIndex4 + 1, separatorIndex5); // Bijv: "1:255,0,0|2:0,255,0|3:0,0,255"
 
         if(needToBuzzer == "1"){
           digitalWrite(buzzer, HIGH);
         }else{
           digitalWrite(buzzer, LOW);
+        }
+
+        // Split op '|' voor meerdere commando's
+        int startIdx = 0;
+        while (true) {
+          int pipePos = ledCommands.indexOf('|', startIdx);
+          String cmd = (pipePos == -1) ? ledCommands.substring(startIdx) : ledCommands.substring(startIdx, pipePos);
+
+          if (cmd.length() > 0) {
+            // Parse LED:R,G,B
+            int colonPos = cmd.indexOf(':');
+            if (colonPos == -1) return; // Fout: geen colon gevonden
+
+            int ledNum = cmd.substring(0, colonPos).toInt();
+            String colorStr = cmd.substring(colonPos + 1);
+
+            // Split de rest in 4 delen (R,G,B,A)
+            int parts[4];
+            int lastIndex = 0;
+            for (int i = 0; i < 4; i++) {
+              int nextComma = colorStr.indexOf(',', lastIndex);
+              if (nextComma == -1 && i < 3) return; // Fout: niet genoeg delen
+              
+              String partStr = colorStr.substring(lastIndex, nextComma != -1 ? nextComma : colorStr.length());
+              parts[i] = i < 3 ? partStr.toInt() : (int)(partStr.toFloat() * 255); // Converteer opacity naar 0-255
+              
+              lastIndex = nextComma + 1;
+            }
+
+            // Zorg ervoor dat waarden binnen bereik zijn
+            parts[0] = constrain(parts[0], 0, 255); // R
+            parts[1] = constrain(parts[1], 0, 255); // G
+            parts[2] = constrain(parts[2], 0, 255); // B
+            parts[3] = constrain(parts[3], 0, 255); // A (nu 0-255)
+
+            Serial.printf("LED %d: R=%d, G=%d, B=%d, A=%d\n", ledNum, parts[0], parts[1], parts[2], parts[3]);
+
+            // Pas de kleur aan met opacity
+            CRGB color = CRGB(
+              (parts[0] * parts[3]) >> 8, // Gelijk aan * (opacity/255)
+              (parts[1] * parts[3]) >> 8,
+              (parts[2] * parts[3]) >> 8
+            );
+            ChangeLED(ledNum, color);
+          }
+
+          if (pipePos == -1) break;
+          startIdx = pipePos + 1;
         }
 
         float afstand = distanceStr.toFloat();
@@ -177,6 +234,13 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
   }
 };
 
+void ChangeLED(int led, CRGB color){
+  if (led >= 0 && led < NUM_LEDS) {
+    leds[led] = color;  // Specifieke LED
+  }
+  FastLED.show();  // Update de LEDs
+}
+
 // Initialize MPU6050
 void initMPU6050() {
   Wire.begin();
@@ -191,6 +255,8 @@ void initMPU6050() {
 }
 
 void setup() {
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+
   Serial.begin(115200);
   Wire.begin();
 
