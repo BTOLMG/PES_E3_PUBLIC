@@ -146,10 +146,8 @@
                 <p class="reading"><span id="hoogteSensor1ValueContainer">NaN</span></p>
                 <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
             </div>
-        </div>
 
-        !-- Sensor Data Display Section -->
-        <div class="card-grid">
+        <!-- Sensor Data Display Section -->
             <div class="card">
                 <h2>Afstand sensor</h2>
                 <p class="reading"><span id="hoogteSensor2ValueContainer">NaN</span></p>
@@ -181,7 +179,7 @@
 
         <!-- LED Display Section -->
         <div class="card-grid">
-            <div class="card">
+            <div class="circle-card">
                 <div class="nextTo">
                     <div class="app-container">
                         <div class="circle-container">
@@ -197,7 +195,6 @@
                             <button class="send-btn" id="sendBtn">Send All Colors</button>
                         </div>
                     </div>
-                    <script src="script.js"></script>
                 </div>
             </div>
         </div>
@@ -205,7 +202,6 @@
 </body>
 <footer>
     <script>
-        // DOM Elements
         // DOM Elements
         const connectButton = document.getElementById('connectBleButton');
         const disconnectButton = document.getElementById('disconnectBleButton');
@@ -291,6 +287,11 @@
 
         // Initialize thumb positions on page load
         window.addEventListener("load", () => {
+            updateSliderAndInput(distanceSlider, distanceInput, distanceSliderThumb, true);
+            updateSliderAndInput(heightSlider, heightInput, heightSliderThumb, true);
+            updateSliderAndInput(leftRightSlider, leftRightInput, leftRightSliderThumb, true);
+        });
+        window.addEventListener("resize", () => {
             updateSliderAndInput(distanceSlider, distanceInput, distanceSliderThumb, true);
             updateSliderAndInput(heightSlider, heightInput, heightSliderThumb, true);
             updateSliderAndInput(leftRightSlider, leftRightInput, leftRightSliderThumb, true);
@@ -428,15 +429,6 @@
                 window.alert("Please fill in all fields before sending data.");
             }
         });
-
-
-
-
-
-
-
-
-
 
         // Connect to BLE Device
         connectButton.addEventListener('click', () => {
@@ -593,6 +585,7 @@
         //-------------led code-------------
     // DOM Elements
     const container = document.querySelector('.circle-container');
+    const card = document.querySelector('.circle-card');
     const sendBtn = document.getElementById('sendBtn');
     const colorPicker = document.getElementById('colorPicker');
     const opacitySlider = document.getElementById('opacitySlider');
@@ -605,55 +598,16 @@
     let ledColors = Array(12).fill().map(() => ({ r: 0, g: 0, b: 0, a: 0, active: false }));
 
     // Constants
-    const radius = 150;
+    const radius = 150; // Adjust radius based on screen size
+    console.log(window.innerWidth +','+ window.innerHeight);
     const center = 200;
     const buttonCount = 12;
 
     // Initialize the application
     function init() {
-        createToggleButtons();
+        reCreateToggleButtons(window.innerWidth < 800 ? -1 : radius); // Adjust radius based on screen size
         setupEventListeners();
         updateRGBValues();
-    }
-
-    // Create toggle buttons in a circle
-    function createToggleButtons() {
-        for (let i = 0; i < buttonCount; i++) {
-            const angle = (i * (2 * Math.PI / buttonCount)) - Math.PI / 2;
-            const x = center + radius * Math.cos(angle) - 25;
-            const y = center + radius * Math.sin(angle) - 25;
-
-            const button = document.createElement('button');
-            button.className = 'toggle-btn';
-            button.textContent = i + 1;
-            button.style.left = `${x}px`;
-            button.style.top = `${y}px`;
-            button.setAttribute('data-index', i);
-            button.style.backgroundColor = '#e0e0e0'; // Default color
-
-            button.addEventListener('click', function() {
-                const index = parseInt(this.getAttribute('data-index'));
-                
-                if (this.classList.contains('active')) {
-                    // If already active, keep the color but mark as inactive
-                    this.classList.remove('active');
-                    ledColors[index].active = false;
-                } else {
-                    // If not active, set the current color and opacity
-                    ledColors[index] = {
-                        r: selectedColor.r,
-                        g: selectedColor.g,
-                        b: selectedColor.b,
-                        a: selectedOpacity,
-                        active: true
-                    };
-                    this.style.backgroundColor = getRGBAString(ledColors[index]);
-                    this.classList.add('active');
-                }
-            });
-
-            container.appendChild(button);
-        }
     }
 
     // Helper function to get RGBA string
@@ -728,9 +682,128 @@
             });
             updateRGBValues();
         });
+
+        window.addEventListener('resize', function() {
+            reCreateToggleButtons(window.innerWidth < 800 ? -1 : radius); // Adjust radius based on screen size
+        });
         
         // Send button
         sendBtn.addEventListener('click', sendLedData);
+    }
+
+    function reCreateToggleButtons(radius) {
+        const buttons = document.querySelectorAll('.toggle-btn');
+        const prevButtons = buttons;
+            buttons.forEach(button => {
+                button.remove(); // Remove existing buttons
+            });
+        if(radius === -1) {
+            container.setAttribute('style', 'width: 0px;');
+            container.style.visibility= 'hidden';
+            for (let i = 0; i < buttonCount; i++) {
+                const rect = container.getBoundingClientRect();
+                const x = rect.x - innerWidth*0.025; // Adjust x position based on card offset
+                const y = i*60 + card.offsetTop + 20; // Adjust y position based on index
+                const button = document.createElement('button');
+                button.className = 'toggle-btn';
+                button.textContent = i + 1;
+                button.style.left = `${x}px`;
+                button.style.top = `${y}px`;
+                button.setAttribute('data-index', i);
+                button.style.backgroundColor = '#e0e0e0'; // Default color
+
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    
+                    if (this.classList.contains('active')) {
+                        // If already active, keep the color but mark as inactive
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        // If not active, set the current color and opacity
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                        this.classList.add('active');
+                    }
+                });
+                card.appendChild(button);
+            }
+            card.style.height = buttonCount*60+30+"px"; // Set height for card
+        }else{
+            container.setAttribute('style', 'width: 400px;');
+            container.style.visibility= 'visible';
+            card.style.height = ''; // Set height for card
+            for (let i = 0; i < buttonCount; i++) {
+                const angle = (i * (2 * Math.PI / buttonCount)) - Math.PI / 2;
+                const x = center + radius * Math.cos(angle) - 25;
+                const y = center + radius * Math.sin(angle) - 25;
+
+                const button = document.createElement('button');
+                button.className = 'toggle-btn';
+                button.textContent = i + 1;
+                button.style.left = `${x}px`;
+                button.style.top = `${y}px`;
+                button.setAttribute('data-index', i);
+                button.style.backgroundColor = '#e0e0e0'; // Default color
+
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    
+                    if (this.classList.contains('active')) {
+                        // If already active, keep the color but mark as inactive
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        // If not active, set the current color and opacity
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                        this.classList.add('active');
+                    }
+                });
+
+                container.appendChild(button);
+            }
+        }  
+
+        const newButtons = document.querySelectorAll('.toggle-btn');
+        newButtons.forEach(button => {
+            prevButtons.forEach(prevButton => {
+                if (button.getAttribute('data-index') === prevButton.getAttribute('data-index')) {
+                    const index = parseInt(button.getAttribute('data-index'));
+                    if (ledColors[index].active) {
+                        button.classList.add('active');
+                        button.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        button.classList.remove('active');
+                    }
+                }
+            });
+        });
+
     }
 
     // Convert hex color to RGB
