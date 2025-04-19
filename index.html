@@ -143,7 +143,16 @@
         <div class="card-grid">
             <div class="card">
                 <h2>Hoogte sensor</h2>
-                <p class="reading"><span id="hoogteSensorValueContainer">NaN</span></p>
+                <p class="reading"><span id="hoogteSensor1ValueContainer">NaN</span></p>
+                <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
+            </div>
+        </div>
+
+        !-- Sensor Data Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <h2>Afstand sensor</h2>
+                <p class="reading"><span id="hoogteSensor2ValueContainer">NaN</span></p>
                 <p class="gray-label">Last reading: <span id="sensorTimestamp"></span></p>
             </div>
         </div>
@@ -508,8 +517,10 @@
 
             newValueReceived.split("&").forEach((value, index) => {
                 if (index === 0) {
-                    hoogteSensorValueContainer.innerHTML = value;
+                    hoogteSensor1ValueContainer.innerHTML = value;
                 } else if (index === 1) {
+                    hoogteSensor2ValueContainer.innerHTML = value;
+                } else if (index === 2) {
                     hoekSensorValueContainer.innerHTML = value;
                 }
             });

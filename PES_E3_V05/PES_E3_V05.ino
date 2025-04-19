@@ -13,7 +13,13 @@
 
 CRGB leds[NUM_LEDS];
 
-VL53L0X sensor;
+VL53L0X sensor1;
+VL53L0X sensor2;
+int a;
+int b;
+const int pinSensor1 = 32;
+const int pinSensor2 = 33;
+
 MPU6050 mpu;
 const int buzzer = 15;
 
@@ -254,6 +260,19 @@ void initMPU6050() {
   Serial.println("MPU6050 initialized.");
 }
 
+void SensorSetup(){
+  digitalWrite(pinSensor1, HIGH);
+  delay(150);
+  sensor1.init(true);
+
+  delay(100);
+
+  sensor1.setAddress((uint8_t)01);
+  digitalWrite(pinSensor2, HIGH);
+  delay(150);
+  sensor2.init(true);
+}
+
 void setup() {
   FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
 
@@ -262,10 +281,25 @@ void setup() {
 
   initMPU6050();
 
-  sensor.setTimeout(500);
-  if (!sensor.init())
+  pinMode(pinSensor1,OUTPUT);
+  pinMode(pinSensor2,OUTPUT);
+
+  digitalWrite(pinSensor1, LOW);
+  digitalWrite(pinSensor2, LOW);
+
+  SensorSetup();
+
+  sensor1.setTimeout(500);
+  if (!sensor1.init())
   {
-    Serial.println("Failed to detect and initialize sensor!");
+    Serial.println("Failed to detect and initialize sensor1!");
+    while (1) {}
+  }
+
+  sensor2.setTimeout(500);
+  if (!sensor2.init())
+  {
+    Serial.println("Failed to detect and initialize sensor2!");
     while (1) {}
   }
 
@@ -273,7 +307,8 @@ void setup() {
   // fast as possible).  To use continuous timed mode
   // instead, provide a desired inter-measurement period in
   // ms (e.g. sensor.startContinuous(100)).
-  sensor.startContinuous();
+  sensor1.startContinuous();
+  sensor2.startContinuous();
 
   tft.init();
   tft.initDMA();
@@ -362,10 +397,11 @@ String updateSensors(){
 
 String updateDistance(){
   String result = ""; 
-  if (sensor.timeoutOccurred()) { 
+  if (sensor1.timeoutOccurred()||sensor2.timeoutOccurred()) { 
     result = "TIMEOUT"; 
   }else{
-    result = (String)(sensor.readRangeContinuousMillimeters());
+    result = (String)(sensor1.readRangeContinuousMillimeters());
+    result += "&"+(String)(sensor2.readRangeContinuousMillimeters());    
   }
   return result;
 }
