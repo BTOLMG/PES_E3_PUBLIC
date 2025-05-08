@@ -1,0 +1,575 @@
+<!--
+  Rui Santos
+  Complete project details at https://RandomNerdTutorials.com/esp32-web-bluetooth/
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PES E3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <div class="content">
+        <!-- BLE Connection Section -->
+        <div class="card-grid">
+            <div class="card">
+                <p>
+                    <button id="connectBleButton" class="connectButton">Connect to BLE Device</button>
+                    <button id="disconnectBleButton" class="disconnectButton">Disconnect BLE Device</button>
+                </p>
+                <p class="gray-label">BLE state: <strong><span id="bleState"
+                            style="color:#d13a30;">Disconnected</span></strong></p>
+            </div>
+        </div>
+        <div class="card-grid">
+          <!-- Distance Control -->
+          <br>
+          <input class="reading textBox" type="number" id="aantalStappen" step="1" value="5"/>
+            <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="hoger" type="button">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">Hoger</span>
+                </div>
+            </div>
+           <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="lager" type="button">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">Lager</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="plusMin" type="checkbox">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">Plus / Min</span>
+                </div>
+            </div>
+           <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="schietenV2" type="button">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">SHIETEN</span>
+                </div>
+            </div>
+        </div>
+        <!-- Buzzer Display Section -->
+        <div class="card-grid">
+            <div class="card">
+                <div class="nextTo">
+                    <label class="switch">
+                        <input id="buzzer" type="checkbox">
+                        <span class="checkSlider"></span>
+                    </label>
+                    <span class="reading">Buzzer</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LED Display Section -->
+        <div class="card-grid">
+            <div class="circle-card">
+                <div class="nextTo">
+                    <div class="app-container">
+                        <div class="circle-container">
+                            <!-- Buttons will be added dynamically -->
+                        </div>
+
+                        <div class="color-controls">
+                            <input type="color" id="colorPicker" value="#ffffff">
+                            <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="1">
+                            <label for="opacitySlider">Opacity</label>
+                            <div class="rgb-values" id="rgbValues">RGBA: 255, 255, 255, 1</div>
+                            <button class="reset-btn" id="resetBtn">Reset All Colors</button>
+                            <button class="send-btn" id="sendBtn">Send All Colors</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+</body>
+<footer>
+    <script>
+        // DOM Elements
+        const connectButton = document.getElementById('connectBleButton');
+        const disconnectButton = document.getElementById('disconnectBleButton');
+        const sensorValueContainer = document.getElementById('sensorValueContainer');
+        const sendValueButton = document.getElementById('sendValue');
+        const bleStateContainer = document.getElementById('bleState');
+        const sensorTimestampContainer = document.getElementById('sensorTimestamp');
+
+        // BLE Device Specifications
+        const deviceName = 'ESP32';
+        const bleServiceUUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
+        const motorControlCharacteristicUUID = '19b10002-e8f2-537e-4f6c-d104768a1214';
+        const sensorDataCharacteristicUUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
+
+
+        //Global Variables to Handle Bluetooth
+        var bleServer;
+        var bleServiceFound;
+        var sensorCharacteristicFound;
+
+        const hoger = document.getElementById("hoger");
+        const lager = document.getElementById("lager");
+        const plusMin = document.getElementById("plusMin");
+        const shietenV2 = document.getElementById("schietenV2");
+        const aantalStappen = document.getElementById("aantalStappen");
+        let dataToSendV2;
+        let isPlus = true;
+
+        hoger.addEventListener("click", () => {
+            dataToSendV2 = "v&"+ aantalStappen;
+            writeToMotorControlCharacteristic(dataToSendV2);
+        });
+        lager.addEventListener("click", () => {
+            dataToSendV2 = "v&-"+ aantalStappen;
+            writeToMotorControlCharacteristic(dataToSendV2);
+        });
+
+        plusMin.addEventListener("click", () => {
+            isPlus != isPlus;
+        });
+        
+        shietenV2.addEventListener("click", () => {
+            dataToSendV2 = "l&";
+            if(isPlus){
+                dataToSendV2 += aantalStappen;
+            }else{
+                dataToSendV2 += "-"+aantalStappen;
+            }
+            writeToMotorControlCharacteristic(dataToSendV2);
+        });
+
+
+        //buzzer
+        const buzzer = document.getElementById("buzzer");
+        let isBuzzer = false;
+
+        // alles klaar variable
+        const allesDoneCheckbox = document.getElementById("AllesDone");
+        let isAllesDone = false;
+
+        buzzer.addEventListener("click", () => {
+            isBuzzer = !isBuzzer;
+            let dataToSend = "&&&";
+
+            if (isBuzzer) {
+                dataToSend += "1&";
+            } else {
+                dataToSend += "0&";
+            }
+            writeToMotorControlCharacteristic(dataToSend);
+
+        });
+
+        // Connect to BLE Device
+        connectButton.addEventListener('click', () => {
+            if (isWebBluetoothEnabled()) {
+                connectToDevice();
+            }
+        });
+
+        // Disconnect from BLE Device
+        disconnectButton.addEventListener('click', disconnectDevice);
+
+        // Check if Web Bluetooth is supported
+        function isWebBluetoothEnabled() {
+            if (!navigator.bluetooth) {
+                console.log('Web Bluetooth API is not available in this browser.');
+                bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device.";
+                return false;
+            }
+            console.log('Web Bluetooth API is supported in this browser.');
+            return true;
+        }
+
+        // Connect to BLE Device and enable notifications
+        function connectToDevice() {
+            console.log('Initializing Bluetooth...');
+            navigator.bluetooth.requestDevice({
+                filters: [{ name: deviceName }],
+                optionalServices: [bleServiceUUID]
+            })
+                .then(device => {
+                    console.log('Device Selected:', device.name);
+                    bleStateContainer.innerHTML = 'Connected to device ' + device.name;
+                    bleStateContainer.style.color = "#24af37";
+                    device.addEventListener('gattservicedisconnected', onDisconnected);
+                    return device.gatt.connect();
+                })
+                .then(gattServer => {
+                    bleServer = gattServer;
+                    console.log("Connected to GATT Server");
+                    return bleServer.getPrimaryService(bleServiceUUID);
+                })
+                .then(service => {
+                    bleService = service;
+                    console.log("Service discovered:", service.uuid);
+                    return service.getCharacteristic(sensorDataCharacteristicUUID);
+                })
+                .then(characteristic => {
+                    console.log("Characteristic discovered:", characteristic.uuid);
+                    sensorDataCharacteristic = characteristic;
+                    characteristic.addEventListener('characteristicvaluechanged', handleSensorDataChange);
+                    characteristic.startNotifications();
+                    console.log("Notifications Started.");
+                    return characteristic.readValue();
+                })
+                .then(value => {
+                    console.log("Read value: ", value);
+                    const decodedValue = new TextDecoder().decode(value);
+                    console.log("Decoded value: ", decodedValue);
+                    sensorValueContainer.innerHTML = decodedValue;
+                })
+                .catch(error => {
+                    console.log('Error: ', error);
+                });
+        }
+
+        // Handle BLE disconnection
+        function onDisconnected(event) {
+            console.log('Device Disconnected:', event.target.device.name);
+            bleStateContainer.innerHTML = "Device disconnected";
+            bleStateContainer.style.color = "#d13a30";
+            connectToDevice();
+        }
+
+        // Handle incoming sensor data
+        function handleSensorDataChange(event) {
+            const newValueReceived = new TextDecoder().decode(event.target.value);
+            console.log("Sensor data changed: ", newValueReceived);
+
+            newValueReceived.split("&").forEach((value, index) => {
+                if (index === 0) {
+                    hoogteSensor1ValueContainer.innerHTML = value;
+                } else if (index === 1) {
+                    hoogteSensor2ValueContainer.innerHTML = value;
+                } else if (index === 2) {
+                    hoekSensorValueContainer.innerHTML = value;
+                }
+            });
+
+            sensorTimestampContainer.innerHTML = getDateTime();
+        }
+
+        // Write data to motor control characteristic
+        function writeToMotorControlCharacteristic(value) {
+            if (bleServer && bleServer.connected) {
+                bleService.getCharacteristic(motorControlCharacteristicUUID)
+                    .then(characteristic => {
+                        console.log("Found the motor control characteristic: ", characteristic.uuid);
+                        const data = new TextEncoder().encode(value);
+                        return characteristic.writeValue(data);
+                    })
+                    .then(() => {
+                        console.log("Value written to motor control characteristic:", value);
+                    })
+                    .catch(error => {
+                        console.error("Error writing to motor control characteristic: ", error);
+                    });
+            } else {
+                console.error("Bluetooth is not connected. Cannot write to characteristic.");
+                window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!");
+            }
+        }
+
+        // Disconnect from BLE Device
+        function disconnectDevice() {
+            console.log("Disconnecting Device...");
+            if (bleServer && bleServer.connected) {
+                if (sensorDataCharacteristic) {
+                    sensorDataCharacteristic.stopNotifications()
+                        .then(() => {
+                            console.log("Notifications Stopped");
+                            return bleServer.disconnect();
+                        })
+                        .then(() => {
+                            console.log("Device Disconnected");
+                            bleStateContainer.innerHTML = "Device Disconnected";
+                            bleStateContainer.style.color = "#d13a30";
+                        })
+                        .catch(error => {
+                            console.log("An error occurred:", error);
+                        });
+                } else {
+                    console.log("No characteristic found to disconnect.");
+                }
+            } else {
+                console.error("Bluetooth is not connected.");
+                window.alert("Bluetooth is not connected.");
+            }
+        }
+
+        // Get current date and time
+        function getDateTime() {
+            const currentDate = new Date();
+            const day = ("00" + currentDate.getDate()).slice(-2);
+            const month = ("00" + (currentDate.getMonth() + 1)).slice(-2);
+            const year = currentDate.getFullYear();
+            const hours = ("00" + currentDate.getHours()).slice(-2);
+            const minutes = ("00" + currentDate.getMinutes()).slice(-2);
+            const seconds = ("00" + currentDate.getSeconds()).slice(-2);
+
+            return `${day}/${month}/${year} at ${hours}:${minutes}:${seconds}`;
+        }
+
+
+        //-------------led code-------------
+    // DOM Elements
+    const container = document.querySelector('.circle-container');
+    const card = document.querySelector('.circle-card');
+    const sendBtn = document.getElementById('sendBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const rgbValues = document.getElementById('rgbValues');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // State variables
+    let selectedColor = { r: 255, g: 255, b: 255 };
+    let selectedOpacity = 1;
+    let ledColors = Array(12).fill().map(() => ({ r: 0, g: 0, b: 0, a: 0, active: false }));
+
+    // Constants
+    const radius = 150; // Adjust radius based on screen size
+    console.log(window.innerWidth +','+ window.innerHeight);
+    const center = 200;
+    const buttonCount = 12;
+
+    // Initialize the application
+    function init() {
+        reCreateToggleButtons(window.innerWidth < 800 ? -1 : radius); // Adjust radius based on screen size
+        setupEventListeners();
+        updateRGBValues();
+    }
+
+    // Helper function to get RGBA string
+    function getRGBAString(color) {
+        return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+    }
+
+    // Update RGB values display
+    function updateRGBValues() {
+        rgbValues.textContent = `RGBA: ${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b}, ${selectedOpacity}`;
+    }
+
+    // Function to send LED data
+    function sendLedData() {
+        const activeLEDs = ledColors.filter(led => led.active);
+        let ledData = "&&&&";
+        ledColors.forEach((led, index) => {
+            if (led.active) {
+                ledData += `${index}:${led.r},${led.g},${led.b},${led.a}|`;
+            }else{
+                ledData += `${index}:0,0,0,0|`;
+            }
+        });
+
+        // Remove the trailing '|' character if exists
+        ledData = ledData.slice(0, -1);
+        console.log("Sending LED data:", ledData);
+        // Send the data
+        writeToMotorControlCharacteristic(ledData);
+    }
+
+    // Update all active buttons with current color and opacity
+    function updateActiveButtons() {
+        const buttons = document.querySelectorAll('.toggle-btn');
+        buttons.forEach(button => {
+            const index = parseInt(button.getAttribute('data-index'));
+            if (ledColors[index].active) {
+                button.style.backgroundColor = getRGBAString(ledColors[index]);
+            }
+        });
+        updateRGBValues();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        // Color picker changes
+        colorPicker.addEventListener('input', function() {
+            selectedColor = hexToRgb(this.value);
+            updateRGBValues();
+        });
+
+        // Opacity slider changes
+        opacitySlider.addEventListener('input', function() {
+            selectedOpacity = parseFloat(this.value);
+            updateRGBValues();
+        });
+
+        // Reset button
+        resetBtn.addEventListener('click', function() {
+            selectedColor = { r: 255, g: 255, b: 255 };
+            selectedOpacity = 1;
+            colorPicker.value = '#ffffff';
+            opacitySlider.value = 1;
+            
+            // Reset all LEDs
+            ledColors = Array(12).fill().map(() => ({ r: 0, g: 0, b: 0, a: 0, active: false }));
+            
+            const buttons = document.querySelectorAll('.toggle-btn');
+            buttons.forEach(button => {
+                button.style.backgroundColor = '#e0e0e0';
+                button.classList.remove('active');
+            });
+            updateRGBValues();
+        });
+
+        window.addEventListener('resize', function() {
+            reCreateToggleButtons(window.innerWidth < 800 ? -1 : radius); // Adjust radius based on screen size
+        });
+        
+        // Send button
+        sendBtn.addEventListener('click', sendLedData);
+    }
+
+    function reCreateToggleButtons(radius) {
+        const buttons = document.querySelectorAll('.toggle-btn');
+        const prevButtons = buttons;
+            buttons.forEach(button => {
+                button.remove(); // Remove existing buttons
+            });
+        if(radius === -1) {
+            container.setAttribute('style', 'width: 0px;');
+            container.style.visibility= 'hidden';
+            for (let i = 0; i < buttonCount; i++) {
+                const rect = container.getBoundingClientRect();
+                const x = rect.x - innerWidth*0.025; // Adjust x position based on card offset
+                const y = i*60 + card.offsetTop + 20; // Adjust y position based on index
+                const button = document.createElement('button');
+                button.className = 'toggle-btn';
+                button.textContent = i + 1;
+                button.style.left = `${x}px`;
+                button.style.top = `${y}px`;
+                button.setAttribute('data-index', i);
+                button.style.backgroundColor = '#e0e0e0'; // Default color
+
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    
+                    if (this.classList.contains('active')) {
+                        // If already active, keep the color but mark as inactive
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        // If not active, set the current color and opacity
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                        this.classList.add('active');
+                    }
+                });
+                card.appendChild(button);
+            }
+            card.style.height = buttonCount*60+30+"px"; // Set height for card
+        }else{
+            container.setAttribute('style', 'width: 400px;');
+            container.style.visibility= 'visible';
+            card.style.height = ''; // Set height for card
+            for (let i = 0; i < buttonCount; i++) {
+                const angle = (i * (2 * Math.PI / buttonCount)) - Math.PI / 2;
+                const x = center + radius * Math.cos(angle) - 25;
+                const y = center + radius * Math.sin(angle) - 25;
+
+                const button = document.createElement('button');
+                button.className = 'toggle-btn';
+                button.textContent = i + 1;
+                button.style.left = `${x}px`;
+                button.style.top = `${y}px`;
+                button.setAttribute('data-index', i);
+                button.style.backgroundColor = '#e0e0e0'; // Default color
+
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    
+                    if (this.classList.contains('active')) {
+                        // If already active, keep the color but mark as inactive
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        // If not active, set the current color and opacity
+                        ledColors[index] = {
+                            r: selectedColor.r,
+                            g: selectedColor.g,
+                            b: selectedColor.b,
+                            a: selectedOpacity,
+                            active: true
+                        };
+                        this.style.backgroundColor = getRGBAString(ledColors[index]);
+                        this.classList.add('active');
+                    }
+                });
+
+                container.appendChild(button);
+            }
+        }  
+
+        const newButtons = document.querySelectorAll('.toggle-btn');
+        newButtons.forEach(button => {
+            prevButtons.forEach(prevButton => {
+                if (button.getAttribute('data-index') === prevButton.getAttribute('data-index')) {
+                    const index = parseInt(button.getAttribute('data-index'));
+                    if (ledColors[index].active) {
+                        button.classList.add('active');
+                        button.style.backgroundColor = getRGBAString(ledColors[index]);
+                    } else {
+                        button.classList.remove('active');
+                    }
+                }
+            });
+        });
+
+    }
+
+    // Convert hex color to RGB
+    function hexToRgb(hex) {
+        const bigint = parseInt(hex.slice(1), 16);
+        return {
+            r: (bigint >> 16) & 255,
+            g: (bigint >> 8) & 255,
+            b: bigint & 255,
+        };
+    }
+
+    // Initialize the application
+    init();
+    </script>
+</footer>
+
+</html>
